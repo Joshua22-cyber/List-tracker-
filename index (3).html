@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market List Keeper</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b1321;
+      color: #eef2ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      background: radial-gradient(circle at top left, rgba(92, 116, 255, 0.22), transparent 24%),
+                  radial-gradient(circle at bottom right, rgba(104, 249, 255, 0.15), transparent 20%),
+                  linear-gradient(180deg, #060b16 0%, #0b1321 55%, #121b2f 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 80% 10%, rgba(255,255,255,0.06), transparent 24%),
+                  radial-gradient(circle at 20% 80%, rgba(255,255,255,0.04), transparent 18%);
+      pointer-events: none;
+    }
+
+    .container {
+      width: min(100%, 540px);
+      background: rgba(14, 20, 37, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 32px;
+      box-shadow: 0 30px 80px rgba(2, 6, 20, 0.45);
+      backdrop-filter: blur(22px);
+      padding: 36px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .container::after {
+      content: "";
+      position: absolute;
+      inset: -40% -40%;
+      background: radial-gradient(circle at 20% 20%, rgba(96, 125, 255, 0.16), transparent 30%),
+                  radial-gradient(circle at 80% 80%, rgba(40, 215, 255, 0.12), transparent 28%);
+      pointer-events: none;
+      opacity: 0.55;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 2.7rem);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hint {
+      margin: 0 0 24px;
+      color: #a4b3d7;
+      font-size: 0.97rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .toast {
+      position: relative;
+      z-index: 1;
+      min-height: 28px;
+      margin-bottom: 18px;
+      color: #c8d5ff;
+      font-size: 0.96rem;
+      opacity: 0;
+      transition: opacity 0.24s ease, transform 0.24s ease;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 18px;
+      padding: 18px 18px;
+      font-size: 1rem;
+      color: #eef2ff;
+      background: rgba(255, 255, 255, 0.04);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    input[type="text"]::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    input[type="text"]:focus {
+      border-color: rgba(94, 123, 255, 0.9);
+      box-shadow: 0 0 0 4px rgba(94, 123, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      padding: 0 26px;
+      min-width: 130px;
+      height: 52px;
+      background: linear-gradient(135deg, #6b71ff, #35d6ff);
+      color: #081127;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 16px 40px rgba(56, 93, 255, 0.18);
+      transition: transform 0.18s ease, filter 0.18s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s ease, opacity 0.35s ease, background 0.2s ease;
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    li.item-enter {
+      animation: item-enter 0.35s ease forwards;
+    }
+
+    li.fade-out {
+      opacity: 0;
+      transform: translateX(-18px);
+    }
+
+    .item-label {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      color: #eef2ff;
+      cursor: pointer;
+    }
+
+    .item-text {
+      font-size: 1rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    input[type="checkbox"] {
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      position: relative;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+      flex-shrink: 0;
+    }
+
+    input[type="checkbox"]:checked {
+      background: linear-gradient(135deg, #6b71ff, #35d6ff);
+      border-color: rgba(107, 113, 255, 0.9);
+      transform: scale(0.98);
+    }
+
+    input[type="checkbox"]:checked::before {
+      content: '\2713';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -57%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    @keyframes item-enter {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 28px 22px 30px;
+      }
+
+      .input-row {
+        grid-template-columns: 1fr;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Market List Keeper</h1>
+    <p class="hint">Add items to your shopping list and keep it handy on mobile.</p>
+    <div class="toast" id="toast" aria-live="polite"></div>
+
+    <div class="input-row">
+      <input id="itemInput" type="text" placeholder="Enter market item" aria-label="Market item" />
+      <button id="addButton" type="button">Add</button>
+    </div>
+
+    <ul id="marketList" aria-live="polite"></ul>
+  </main>
+
+  <script>
+    const input = document.getElementById('itemInput');
+    const button = document.getElementById('addButton');
+    const list = document.getElementById('marketList');
+    const toast = document.getElementById('toast');
+    const STORAGE_KEY = 'marketList';
+
+    const funMessages = [
+      'Egusi done! 🎉',
+      'Bought! Go chop life ✨',
+      'Market run complete! 🛒',
+      'Oya, ingredients secured! 💥',
+      'Fresh haul unlocked! 🥳',
+      'Your chops await! 🍲',
+      'Naija market magic! ✨'
+    ];
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('visible');
+      clearTimeout(showToast.hideTimeout);
+      showToast.hideTimeout = setTimeout(() => {
+        toast.classList.remove('visible');
+      }, 2200);
+    }
+
+    function saveList() {
+      const items = Array.from(list.querySelectorAll('.item-text')).map(span => span.textContent);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function createListItem(text, animate = true) {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      label.className = 'item-label';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.setAttribute('aria-label', `Mark ${text} as bought`);
+
+      const span = document.createElement('span');
+      span.className = 'item-text';
+      span.textContent = text;
+
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      li.appendChild(label);
+
+      checkbox.addEventListener('change', () => {
+        if (!checkbox.checked) return;
+        const message = funMessages[Math.floor(Math.random() * funMessages.length)];
+        showToast(message);
+        li.classList.add('fade-out');
+        setTimeout(() => {
+          li.remove();
+          saveList();
+        }, 1000);
+      });
+
+      if (animate) {
+        requestAnimationFrame(() => {
+          li.classList.add('item-enter');
+        });
+      } else {
+        li.style.opacity = '1';
+        li.style.transform = 'none';
+      }
+
+      return li;
+    }
+
+    function addItem() {
+      const value = input.value.trim();
+      if (!value) return;
+
+      const li = createListItem(value);
+      list.appendChild(li);
+      input.value = '';
+      input.focus();
+      saveList();
+    }
+
+    function loadList() {
+      const savedItems = localStorage.getItem(STORAGE_KEY);
+      if (savedItems) {
+        try {
+          const items = JSON.parse(savedItems);
+          items.forEach(item => {
+            const li = createListItem(item, false);
+            list.appendChild(li);
+          });
+        } catch (e) {
+          console.error('Error loading list:', e);
+        }
+      }
+    }
+
+    button.addEventListener('click', addItem);
+    input.addEventListener('keypress', event => {
+      if (event.key === 'Enter') {
+        addItem();
+      }
+    });
+
+    loadList();
+  </script>
+</body>
+</html>
